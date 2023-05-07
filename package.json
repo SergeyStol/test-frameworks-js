@@ -1,0 +1,33 @@
+{
+  "name": "test-frameworks-js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SergeyStol/test-frameworks-js.git"
+  },
+  "keywords": [
+    "nodejs",
+    "jest",
+    "testcontainers",
+    "tests",
+    "mongoose"
+  ],
+  "author": "sstol",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/SergeyStol/test-frameworks-js/issues"
+  },
+  "homepage": "https://github.com/SergeyStol/test-frameworks-js#readme",
+  "devDependencies": {
+    "jest": "29.5.0"
+  },
+  "dependencies": {
+    "mongoose": "7.1.0",
+    "testcontainers": "^9.6.0"
+  }
+}
