@@ -2,36 +2,23 @@
 
 const mongoose = require('mongoose');
 
-class PersonsRepository {
+const PERSONS_COLLECTION_TITLE = 'persons';
+
+class PersonsRepositoryMongoose {
    constructor(uri) {
       console.log(`DB connection string: ${uri}`);
       mongoose.connect(uri);
       this.personSchema = new mongoose.Schema({
-         id: Number,
+         id: { type: Number, unique: true },
          name: String,
          surname: String,
          birthdate: Date
       });
-      this.PersonModel = mongoose.model('persons', this.personSchema);
+      this.PersonModel = mongoose.model(PERSONS_COLLECTION_TITLE, this.personSchema);
    }
 
    async save(person) {
-      return person.save();
-   }
-
-   async addNewPersons(persons) {
-      if (persons?.length === 0)
-         return [];
-      const ops = persons.map(person => ({
-         updateOne: {
-            filter: { id: person.id },
-            update: { $setOnInsert: person },
-            upsert: true,
-         },
-      }));
-
-      let result = await this.PersonModel.bulkWrite(ops, { ordered: false });
-      return result.getUpsertedIds().map(el => el._id.toString());
+      return new this.PersonModel(person).save();
    }
 
    async findAll() {
@@ -44,19 +31,30 @@ class PersonsRepository {
       return (await this.PersonModel.find({"id": id}))[0].toJSON();
    }
 
-   async findPersonsAndGetIdsOnly(_ids) {
-      let personsIds = await this.PersonModel.find({
-         _id: {$in: _ids}
-      }).select('id');
-      return personsIds.map(personId => personId.id.toString());
-   }
-
    async deleteOne(id) {
       return this.PersonModel.deleteOne({"id": id});
    }
 
    async updateOne(filter, updateData) {
       return this.PersonModel.updateOne(filter, updateData);
+   }
+
+   async addNewPersons(persons) {
+      if (!persons || persons.length === 0) {
+         return [];
+      }
+      const ops = persons.map(person => ({
+         updateOne: {
+            filter: { personId: person.personId },
+            update: { $setOnInsert: person },
+            upsert: true,
+         },
+      }));
+      if (!ops || ops.length === 0) {
+         return [];
+      }
+      let result = await this.PersonModel.bulkWrite(ops, { ordered: false });
+      return result.getUpsertedIds().map(el => el._id.toString());
    }
 
    getModel() {
@@ -68,4 +66,4 @@ class PersonsRepository {
    }
 }
 
-module.exports = PersonsRepository
+module.exports = PersonsRepositoryMongoose

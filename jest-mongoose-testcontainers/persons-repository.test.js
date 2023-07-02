@@ -8,46 +8,41 @@ describe('MongoDb', () => {
    let container;
 
    let PersonModel;
-   let personDao;
+   let personDao1;
    let personDao2;
-   let personSchema;
+   let personDao3;
 
    let personsRepository;
 
    beforeAll(async () => {
-      const container = await new GenericContainer("mongo")
+      container = await new GenericContainer("mongo")
          .withExposedPorts(27017)
          .start();
       personsRepository = new PersonsRepository(`mongodb://localhost:${container.getFirstMappedPort()}`);
-      PersonModel = personsRepository.model;
-      personDao = new PersonModel({
-         id: 1,
-         name: 'Sergey',
-         surname: 'Stol',
-         birthdate: Date.now()
-      });
-      personSchema = new mongoose.Schema({
-         id: { type: Number, unique: true },
-         name: String,
-         surname: String,
-         birthdate: Date
-      });
+      PersonModel = personsRepository.getModel();
    })
 
    beforeEach(() => {
-      personDao = new PersonModel({
+      personDao1 = {
          id: 1,
-         name: 'Sergey',
-         surname: 'Stol',
-         birthdate: Date.now()
-      });
+         name: 'name1',
+         surname: 'surname1',
+         birthdate: Date.now(),
+      };
 
-      personDao2 = new PersonModel({
+      personDao2 = {
          id: 2,
-         name: 'Andrew',
-         surname: 'Ivanov',
-         birthdate: Date.now()
-      });
+         name: 'name2',
+         surname: 'surname2',
+         birthdate: Date.now(),
+      };
+
+      personDao3 = {
+         id: 3,
+         name: 'name3',
+         surname: 'surname3',
+         birthdate: Date.now(),
+      };
    })
 
    afterEach(async () => {
@@ -58,55 +53,73 @@ describe('MongoDb', () => {
       await mongoose.connection.db.dropDatabase();
       await mongoose.connection.close();
 
-      // await container.stop();
+      await container.stop();
    })
 
    test('should save Person', async () => {
-      await personDao.save();
-      let savedPerson = await personsRepository.save(personDao);
-      expect(savedPerson).toStrictEqual(personDao);
+      await personDao1.save();
+      let savedPerson = await personsRepository.save(personDao1);
+      expect(savedPerson).toStrictEqual(personDao1);
    });
 
    test('should find all persons', async () => {
-      await personDao.save();
+      await personDao1.save();
       let persons = await personsRepository.findAll();
       expect(persons.length).toBe(1);
-      expect(persons[0]).toStrictEqual(personDao.toJSON());
+      expect(persons[0]).toStrictEqual(personDao1.toJSON());
    });
 
    test('should find all persons2', async () => {
-      await personDao.save();
+      await personDao1.save();
       await personDao2.save();
       let persons = await personsRepository.findAll();
       expect(persons.length).toBe(2);
-      expect(persons[0]).toStrictEqual(personDao.toJSON());
+      expect(persons[0]).toStrictEqual(personDao1.toJSON());
       expect(persons[1]).toStrictEqual(personDao2.toJSON());
    });
 
    test('should find person by id', async () => {
-      await personDao.save();
+      await personDao1.save();
       await personDao2.save();
-      let person = await personsRepository.find(personDao.toJSON().id);
-      expect(person).toStrictEqual(personDao.toJSON());
+      let person = await personsRepository.find(personDao1.toJSON().id);
+      expect(person).toStrictEqual(personDao1.toJSON());
    });
 
    test('should delete person by id', async () => {
-      await personDao.save();
-      let query = await personsRepository.deleteOne(personDao.toJSON().id);
+      await personDao1.save();
+      let query = await personsRepository.deleteOne(personDao1.toJSON().id);
       expect(query.deletedCount).toBe(1);
       let persons = await PersonModel.find();
       expect(persons.length).toBe(0);
    });
 
    test('should update person by filter', async () => {
-      await personDao.save();
+      await personDao1.save();
       const query =
-         await personsRepository.updateOne({"id": personDao.toJSON().id},
+         await personsRepository.updateOne({"id": personDao1.toJSON().id},
             {"name": "Sergey2"});
       expect(query.matchedCount).toBe(1);
       expect(query.modifiedCount).toBe(1);
-      const personActual = (await PersonModel.find({"id": personDao.toJSON().id}))[0].toJSON();
-      const personExpected = personDao.toJSON();
+      const personActual = (await PersonModel.find({"id": personDao1.toJSON().id}))[0].toJSON();
+      const personExpected = personDao1.toJSON();
+      personExpected.name = 'Sergey2';
+      expect(personActual).toStrictEqual(personExpected);
+   });
+
+   test('addNewPersons should add just new persons', async () => {
+      await new PersonModel(personDao1).save();
+
+      let addedPersonsIds = await personsRepository.addNewPersons([personDao1, personDao2, personDao3]);
+      expect(addedPersonsIds.length).toBe(2);
+      let persons = await PersonModel.find();
+      
+
+      const query2 =
+         await personsRepository.addNewPersons([personDao1, personDao2]);
+      expect(query2.matchedCount).toBe(1);
+      expect(query2.modifiedCount).toBe(1);
+      const personActual = (await PersonModel.find({"id": personDao1.toJSON().id}))[0].toJSON();
+      const personExpected = personDao1.toJSON();
       personExpected.name = 'Sergey2';
       expect(personActual).toStrictEqual(personExpected);
    });
